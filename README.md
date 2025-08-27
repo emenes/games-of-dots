@@ -1,6 +1,6 @@
 # Games of Dots
 
-**Games of Dots** is a simple yet fun browser game built entirely with HTML by Emenes
+**Games of Dots** is a simple yet fun browser game built entirely with HTML by Emenes<br>
 It comes with a **minimalist design** and uses **bright, clean colors** to create a light and playful experience.
 
 ## Game Modes
