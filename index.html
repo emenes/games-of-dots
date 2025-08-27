@@ -1,0 +1,900 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>GAME OF DOTS BY EMENES</title>
+<style>
+  :root{
+    --bg:#f6f7f8;
+    --card:#ffffff;
+    --muted:#9aa5ad;
+    --accent:#7aa7c7;
+    --accent-2:#c6dbe6;
+    --line:#d7e3ea;
+    --dot:#3b4b56;
+    --text:#21303a;
+    --score-a:#7fb3d5;
+    --score-b:#c9a0d9;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    min-height:100vh;
+    background:linear-gradient(180deg,var(--bg),#ffffff);
+    color:var(--text);
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    padding:28px;
+  }
+  .app{
+    width:100%;
+    max-width:1100px;
+    background:var(--card);
+    border-radius:14px;
+    padding:20px;
+    box-shadow:0 8px 30px rgba(34,50,60,0.06);
+  }
+  header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    margin-bottom:18px;
+  }
+  h1{font-size:20px;margin:0;color:var(--text)}
+  .controls{
+    display:flex;
+    gap:10px;
+    align-items:center;
+  }
+  select,input{padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:transparent}
+  button{
+    padding:8px 12px;border-radius:10px;border:0;background:var(--accent);color:white;cursor:pointer;
+    box-shadow: 0 4px 10px rgba(122,167,199,0.18);
+  }
+  button.ghost{background:transparent;color:var(--accent);border:1px solid var(--line);box-shadow:none}
+  main{display:flex;gap:18px;align-items:flex-start}
+  .left{
+    flex:1;
+    min-width:320px;
+    padding:12px;
+    border-radius:12px;
+    background:linear-gradient(180deg, rgba(198,219,230,0.6), rgba(255,255,255,0.5));
+  }
+  .right{
+    width:300px;
+    padding:12px;
+    border-radius:12px;
+    background:linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,255,255,0.9));
+  }
+  .area{
+    background:transparent;
+    padding:8px;
+    border-radius:8px;
+  }
+  .meta{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+  .player-box{display:flex;gap:8px;align-items:center;padding:8px;border-radius:8px;background:rgba(255,255,255,0.6);border:1px dashed var(--line)}
+  .player-dot{width:12px;height:12px;border-radius:50%}
+  .scores{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+  .score{padding:8px;border-radius:8px;background:rgba(255,255,255,0.7);min-width:110px}
+  .hint{color:var(--muted);font-size:13px;margin-top:8px}
+  .board-wrap{display:flex;align-items:center;justify-content:center;padding:10px;background:transparent;border-radius:10px}
+  /* svg styling */
+  svg {max-width:100%;height:auto;display:block}
+  .dot{fill:var(--dot)}
+  .edge {stroke:var(--line);stroke-width:6;stroke-linecap:round;cursor:pointer}
+  .edge.taken{stroke:var(--accent);stroke-width:8}
+  .edge.taken.cpu{stroke:var(--score-b)}
+  .box{fill:rgba(255,255,255,0);stroke:none}
+  .box.ownerA{fill:rgba(127,179,213,0.22)}
+  .box.ownerB{fill:rgba(201,160,217,0.18)}
+  .box-text{font-weight:700;fill:var(--text);font-size:14px;text-anchor:middle;dominant-baseline:middle}
+  footer{margin-top:12px;font-size:13px;color:var(--muted);display:flex;justify-content:space-between;align-items:center}
+  .hs-list{max-height:140px;overflow:auto;padding:6px;border-radius:8px;border:1px dashed var(--line);background:rgba(255,255,255,0.7)}
+  .small{font-size:13px;color:var(--muted)}
+  .row{display:flex;gap:8px;align-items:center}
+  label{font-size:13px;color:var(--muted)}
+  input[type="text"]{width:120px}
+  .controls-bottom{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .action-btn{background:var(--accent);color:white;border-radius:8px;padding:8px 10px;border:0;cursor:pointer}
+  .danger{background:#e07b7b}
+  @media (max-width:880px){
+    main{flex-direction:column}
+    .right{width:100%}
+  }
+</style>
+</head>
+<body>
+  <div class="app" role="application" aria-label="Game of Dots">
+    <header>
+      <div>
+        <h1>Game of Dots</h1>
+        <div class="small">Classic Dots &amp; Boxes. Connect dots to complete boxes. Get another turn when you complete one.</div>
+      </div>
+      <div class="controls">
+        <label class="small">Mode</label>
+        <select id="modeSelect" aria-label="mode">
+          <option value="vsCPU">Play vs Computer</option>
+          <option value="two">2-Player (local)</option>
+        </select>
+        <label class="small">Level</label>
+        <select id="levelSelect" aria-label="level">
+          <option value="easy">Easy</option>
+          <option value="medium">Medium</option>
+          <option value="hard">Hard</option>
+        </select>
+        <button id="newBtn">New Game</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="left">
+        <div class="meta">
+          <div class="player-box">
+            <div style="display:flex;flex-direction:column">
+              <div class="small">Player A</div>
+              <input type="text" id="pAName" placeholder="Initials (1-2)" maxlength="2" value="A" />
+            </div>
+            <div class="player-dot" style="background:var(--score-a)"></div>
+            <div class="small">Score: <span id="scoreA">0</span></div>
+          </div>
+
+          <div class="player-box" id="playerBBox">
+            <div style="display:flex;flex-direction:column">
+              <div class="small" id="pBLabel">Computer</div>
+              <input type="text" id="pBName" placeholder="Initials (1-2)" maxlength="2" value="B" />
+            </div>
+            <div class="player-dot" style="background:var(--score-b)"></div>
+            <div class="small">Score: <span id="scoreB">0</span></div>
+          </div>
+
+          <div style="margin-left:auto">
+            <div class="small">Turn: <strong id="turnDisplay">A</strong></div>
+            <div class="small">Timer: <strong id="timer">00:00</strong></div>
+            <div class="small hint" id="turnHint">Complete a box to play again.</div>
+          </div>
+        </div>
+
+        <div class="board-wrap">
+          <div id="boardArea" class="area" aria-live="polite"></div>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap">
+          <button id="saveBtn" class="ghost">Save Game</button>
+          <button id="loadBtn" class="ghost">Load Game</button>
+          <button id="resetStorageBtn" class="ghost danger">Reset Highscores & Saves</button>
+        </div>
+
+        <div class="hint" style="margin-top:10px">
+          Tip:<br>• If you play against CPU, the difficulty of CPU follows the chosen Level.
+          <br>• The current player's turn is indicated in the Turn section.
+          <br>• Connect the dots to complete the box and conquer it.
+        </div>
+      </section>
+
+      <aside class="right">
+        <div class="area">
+          <div class="small"><b>GAME INFO</b></div>
+          <div class="scores" style="margin-top:8px">
+            <div class="score"><div class="small">Grid</div><div id="gridInfo">-</div></div>
+            <div class="score"><div class="small">Moves</div><div id="moveCount">0</div></div>
+            <div class="score"><div class="small">Boxes left</div><div id="boxesLeft">-</div></div>
+          </div>
+
+          <div style="margin-top:12px">
+            <div class="small">Highscores (fastest wins)</div>
+            <div class="hs-list" id="hsList"></div>
+          </div>
+
+          <div style="margin-top:12px">
+            <div class="small">AI Difficulty (vs CPU)</div>
+            <select id="aiDifficulty" aria-label="ai difficulty">
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard">Hard</option>
+            </select>
+            <div class="small hint" style="margin-top:6px">AI Easy = random<br>Medium = avoid giving free boxes<br>Hard = opportunistic + avoidance.</div><br/>
+            <div class="small hint" style="margin-top:6px"><b>HOW TO PLAY</b></div>
+            <div class="small hint" style="margin-top:6px">To begin a new game, click New Game. You have the option to configure the Game Mode (Computer/2-player) and the Difficulty Level (Easy, Medium, Hard).</div>
+            <div class="small hint" style="margin-top:6px">The Easy level is the smallest grid, while the Hard level is the largest grid in size.</div>
+            <div class="small hint" style="margin-top:6px">The winner is determined by the most boxes captured. The current player's turn is indicated in the Turn section.</div>
+          </div>
+
+        </div>
+      </aside>
+    </main>
+
+    <footer>
+      <div class="small">Game of Dots by Emenes • 2025 • v1.5</div>
+      <div class="small">Conquer your box - enjoy!</div>
+    </footer>
+  </div>
+
+<script>
+/*
+  Game of Dots (Dots & Boxes) implementation.
+  Features:
+  - 2 modes: vs CPU and 2-player
+  - 3 difficulty levels, random grid size per level
+  - Timer (tracking finish time); Highscore stored in localStorage (fastest wins)
+  - Save / Load game state in localStorage
+  - Minimalist, single-file
+*/
+
+/* ---------- Utilities ---------- */
+const qs = s => document.querySelector(s);
+const qsa = s => Array.from(document.querySelectorAll(s));
+const fmtTime = s => {
+  const mm = String(Math.floor(s/60)).padStart(2,'0');
+  const ss = String(s%60).padStart(2,'0');
+  return `${mm}:${ss}`;
+};
+const randInt = (a,b) => Math.floor(Math.random()*(b-a+1))+a;
+
+/* ---------- DOM ---------- */
+const modeSelect = qs('#modeSelect');
+const levelSelect = qs('#levelSelect');
+const newBtn = qs('#newBtn');
+const boardArea = qs('#boardArea');
+const pANameInput = qs('#pAName');
+const pBNameInput = qs('#pBName');
+const pBLabel = qs('#pBLabel');
+const scoreAEl = qs('#scoreA');
+const scoreBEl = qs('#scoreB');
+const turnDisplay = qs('#turnDisplay');
+const timerEl = qs('#timer');
+const gridInfoEl = qs('#gridInfo');
+const moveCountEl = qs('#moveCount');
+const boxesLeftEl = qs('#boxesLeft');
+const hsListEl = qs('#hsList');
+const saveBtn = qs('#saveBtn');
+const loadBtn = qs('#loadBtn');
+const resetStorageBtn = qs('#resetStorageBtn');
+const aiDifficultySel = qs('#aiDifficulty');
+const showStateBtn = qs('#showStateBtn');
+
+/* ---------- Game state ---------- */
+let state = null;
+let timerInterval = null;
+let elapsedSeconds = 0;
+
+/* ---------- LocalStorage keys ---------- */
+const HS_KEY = 'god_highscores_v1';
+const SAVE_KEY = 'god_save_v1';
+
+/* ---------- Grid generation rules ---------- */
+function randomGridForLevel(level){
+  // Return rows, cols
+  if(level === 'easy'){
+    const r = randInt(5,7), c = randInt(5,7);
+    return {rows:r, cols:c};
+  } else if(level === 'medium'){
+    const r = randInt(8,10), c = randInt(8,10);
+    return {rows:r, cols:c};
+  } else {
+    const r = randInt(11,20), c = randInt(11,20);
+    return {rows:r, cols:c};
+  }
+}
+
+/* ---------- Create new game ---------- */
+function newGame(opts = {}){
+  const mode = opts.mode || modeSelect.value;
+  const level = opts.level || levelSelect.value;
+  const grid = randomGridForLevel(level);
+  const rows = grid.rows, cols = grid.cols;
+  // Data structures:
+  // horiz[r][c] for horizontal edges between dot (r,c) and (r,c+1): r in 0..rows-1, c in 0..cols-2
+  // vert[r][c] for vertical edges between dot (r,c) and (r+1,c): r in 0..rows-2, c in 0..cols-1
+  const horiz = Array.from({length:rows}, ()=>Array(cols-1).fill(null));
+  const vert = Array.from({length:rows-1}, ()=>Array(cols).fill(null));
+  // boxes[r][c] for box owner null/'A'/'B'
+  const boxes = Array.from({length:rows-1}, ()=>Array(cols-1).fill(null));
+  state = {
+    mode, level, rows, cols, horiz, vert, boxes,
+    turn: 'A', // 'A' or 'B'
+    playerA: (pANameInput.value||'A').slice(0,2) || 'A',
+    playerB: (pBNameInput.value||'B').slice(0,2) || 'B',
+    scores:{A:0,B:0},
+    moveCount:0,
+    boxesLeft: (rows-1)*(cols-1),
+    aiDifficulty: aiDifficultySel.value,
+    cpuIsB: (mode === 'vsCPU'),
+    started: false,
+    savedAt: null
+  };
+  pBLabel.textContent = state.cpuIsB ? 'Computer' : 'Player B';
+  updateUI();
+  stopTimer();
+  elapsedSeconds = 0;
+  timerEl.textContent = fmtTime(0);
+  renderBoard();
+  saveTempAuto(); // optional auto-save to preserve unsaved
+}
+
+/* ---------- Render board using SVG ---------- */
+function renderBoard(){
+  if(!state) return;
+  const PAD = 18;
+  const dotRadius = 5;
+  const gap = Math.max(36, Math.min(60, Math.floor(420 / Math.max(state.rows, state.cols))));
+  const width = PAD*2 + gap*(state.cols-1);
+  const height = PAD*2 + gap*(state.rows-1);
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(svgNS,'svg');
+  svg.setAttribute('width', width);
+  svg.setAttribute('height', height);
+  svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+  svg.setAttribute('role','img');
+  // clickable edges: we'll render invisible wide lines for pointer area, plus visible lines for taken edges
+  // Draw boxes first (background rects & labels)
+  for(let r=0;r<state.rows-1;r++){
+    for(let c=0;c<state.cols-1;c++){
+      const x = PAD + c*gap;
+      const y = PAD + r*gap;
+      const rect = document.createElementNS(svgNS,'rect');
+      rect.setAttribute('x', x+dotRadius);
+      rect.setAttribute('y', y+dotRadius);
+      rect.setAttribute('width', gap-2*dotRadius);
+      rect.setAttribute('height', gap-2*dotRadius);
+      rect.setAttribute('class','box');
+      const owner = state.boxes[r][c];
+      if(owner==='A') rect.classList.add('ownerA');
+      if(owner==='B') rect.classList.add('ownerB');
+      svg.appendChild(rect);
+      if(owner){
+        const t = document.createElementNS(svgNS,'text');
+        t.setAttribute('x', x + gap/2);
+        t.setAttribute('y', y + gap/2);
+        t.setAttribute('class','box-text');
+        t.textContent = owner === 'A' ? state.playerA : state.playerB;
+        svg.appendChild(t);
+      }
+    }
+  }
+
+  // Draw edges (horizontal)
+  for(let r=0;r<state.rows;r++){
+    for(let c=0;c<state.cols-1;c++){
+      const x1 = PAD + c*gap;
+      const y1 = PAD + r*gap;
+      const x2 = PAD + (c+1)*gap;
+      const y2 = y1;
+      const id = `h-${r}-${c}`;
+      const takenBy = state.horiz[r][c]; // null / 'A' / 'B'
+      // visible line
+      const line = document.createElementNS(svgNS,'line');
+      line.setAttribute('x1', x1);
+      line.setAttribute('y1', y1);
+      line.setAttribute('x2', x2);
+      line.setAttribute('y2', y2);
+      line.setAttribute('class', 'edge' + (takenBy ? ' taken' + (takenBy==='B' && state.cpuIsB ? ' cpu' : '') : ''));
+      line.setAttribute('data-id', id);
+      svg.appendChild(line);
+
+      // clickable wide invisible overlay for pointer + click
+      const hit = document.createElementNS(svgNS,'line');
+      hit.setAttribute('x1', x1);
+      hit.setAttribute('y1', y1);
+      hit.setAttribute('x2', x2);
+      hit.setAttribute('y2', y2);
+      hit.setAttribute('stroke-width', 18);
+      hit.setAttribute('stroke', 'transparent');
+      hit.style.cursor = takenBy ? 'default' : 'pointer';
+      hit.addEventListener('click', ()=>tryMakeMove({type:'h',r,c}));
+      svg.appendChild(hit);
+    }
+  }
+  // vertical edges
+  for(let r=0;r<state.rows-1;r++){
+    for(let c=0;c<state.cols;c++){
+      const x1 = PAD + c*gap;
+      const y1 = PAD + r*gap;
+      const x2 = x1;
+      const y2 = PAD + (r+1)*gap;
+      const id = `v-${r}-${c}`;
+      const takenBy = state.vert[r][c];
+      const line = document.createElementNS(svgNS,'line');
+      line.setAttribute('x1', x1);
+      line.setAttribute('y1', y1);
+      line.setAttribute('x2', x2);
+      line.setAttribute('y2', y2);
+      line.setAttribute('class', 'edge' + (takenBy ? ' taken' + (takenBy==='B' && state.cpuIsB ? ' cpu' : '') : ''));
+      line.setAttribute('data-id', id);
+      svg.appendChild(line);
+
+      const hit = document.createElementNS(svgNS,'line');
+      hit.setAttribute('x1', x1);
+      hit.setAttribute('y1', y1);
+      hit.setAttribute('x2', x2);
+      hit.setAttribute('y2', y2);
+      hit.setAttribute('stroke-width', 18);
+      hit.setAttribute('stroke', 'transparent');
+      hit.style.cursor = takenBy ? 'default' : 'pointer';
+      hit.addEventListener('click', ()=>tryMakeMove({type:'v',r,c}));
+      svg.appendChild(hit);
+    }
+  }
+
+  // draw dots on top
+  for(let r=0;r<state.rows;r++){
+    for(let c=0;c<state.cols;c++){
+      const x = PAD + c*gap;
+      const y = PAD + r*gap;
+      const circle = document.createElementNS(svgNS,'circle');
+      circle.setAttribute('cx', x);
+      circle.setAttribute('cy', y);
+      circle.setAttribute('r', dotRadius);
+      circle.setAttribute('class','dot');
+      svg.appendChild(circle);
+    }
+  }
+
+  boardArea.innerHTML = '';
+  boardArea.appendChild(svg);
+  gridInfoEl.textContent = `${state.rows}×${state.cols} dots (${state.rows-1}×${state.cols-1} boxes)`;
+  moveCountEl.textContent = state.moveCount;
+  boxesLeftEl.textContent = state.boxesLeft;
+}
+
+/* ---------- Move handling ---------- */
+function tryMakeMove(edge){
+  if(!state) return;
+  if(state.cpuIsB && state.turn === 'B' && state.mode === 'vsCPU'){ return; } // prevent clicking during CPU turn
+  // validate not taken
+  const taken = (edge.type==='h') ? state.horiz[edge.r][edge.c] : state.vert[edge.r][edge.c];
+  if(taken) return;
+  playEdge(edge, 'A'===state.turn ? 'A' : 'B');
+}
+
+function playEdge(edge, by){
+  if(!state.started){ state.started = true; startTimer(); }
+  // mark edge
+  if(edge.type === 'h') state.horiz[edge.r][edge.c] = by;
+  else state.vert[edge.r][edge.c] = by;
+  state.moveCount++;
+  // check boxes completed by this edge
+  const completed = checkCompletedBoxes(edge, by);
+  if(completed > 0){
+    // assign initial inside boxes handled in checkCompletedBoxes
+    state.scores[by] += completed;
+    state.boxesLeft -= completed;
+    // same player's turn again
+    // check if game end
+    renderBoard();
+    updateUI();
+    if(state.boxesLeft === 0){
+      endGame();
+      return;
+    }
+    // if still player's turn and CPU, schedule CPU move if needed
+    if(state.cpuIsB && state.turn === 'B'){
+      setTimeout(cpuMove, 450);
+    }
+    return;
+  } else {
+    // swap turn
+    state.turn = (state.turn === 'A') ? 'B' : 'A';
+    renderBoard();
+    updateUI();
+    if(state.cpuIsB && state.turn === 'B'){
+      setTimeout(cpuMove, 450);
+    }
+  }
+}
+
+/* Return number of boxes completed and mark them */
+function checkCompletedBoxes(edge, by){
+  let completed = 0;
+  const rows = state.rows, cols = state.cols;
+  if(edge.type === 'h'){
+    const r = edge.r, c = edge.c;
+    // top box (r-1, c)
+    if(r-1 >= 0){
+      if(isBoxCompleted(r-1,c)){
+        if(!state.boxes[r-1][c]){ state.boxes[r-1][c] = by; completed++; }
+      }
+    }
+    // bottom box (r, c)
+    if(r < rows-1){
+      if(isBoxCompleted(r,c)){
+        if(!state.boxes[r][c]){ state.boxes[r][c] = by; completed++; }
+      }
+    }
+  } else {
+    const r = edge.r, c = edge.c;
+    // left box (r, c-1)
+    if(c-1 >= 0){
+      if(isBoxCompleted(r,c-1)){
+        if(!state.boxes[r][c-1]){ state.boxes[r][c-1] = by; completed++; }
+      }
+    }
+    // right box (r, c)
+    if(c < cols-1){
+      if(isBoxCompleted(r,c)){
+        if(!state.boxes[r][c]){ state.boxes[r][c] = by; completed++; }
+      }
+    }
+  }
+  return completed;
+}
+
+/* Check if a box at boxR, boxC has all 4 edges present */
+function isBoxCompleted(boxR, boxC){
+  // top horiz (boxR)
+  const top = state.horiz[boxR][boxC];
+  const bottom = state.horiz[boxR+1][boxC];
+  const left = state.vert[boxR][boxC];
+  const right = state.vert[boxR][boxC+1];
+  return top && bottom && left && right;
+}
+
+/* ---------- Computer AI ---------- */
+function availableMoves(){
+  const moves = [];
+  for(let r=0;r<state.rows;r++){
+    for(let c=0;c<state.cols-1;c++){
+      if(!state.horiz[r][c]) moves.push({type:'h',r,c});
+    }
+  }
+  for(let r=0;r<state.rows-1;r++){
+    for(let c=0;c<state.cols;c++){
+      if(!state.vert[r][c]) moves.push({type:'v',r,c});
+    }
+  }
+  return moves;
+}
+
+/* Count how many boxes would be completed if a move is played (without modifying state) */
+function countBoxesIf(move){
+  let cnt=0;
+  if(move.type === 'h'){
+    const r = move.r, c = move.c;
+    // top
+    if(r-1 >= 0){
+      const top = state.horiz[r-1][c];
+      const bottom = state.horiz[r+0][c]; // this move
+      const left = state.vert[r-1][c];
+      const right = state.vert[r-1][c+1];
+      // bottom in this case is our move - simulate taken
+      const topEdge = top ? 1 : 0;
+      const bottomEdge = 1;
+      const leftEdge = left ? 1 : 0;
+      const rightEdge = right ? 1 : 0;
+      if(topEdge+bottomEdge+leftEdge+rightEdge === 4) cnt++;
+    }
+    if(r < state.rows-1){
+      const top = state.horiz[r][c];
+      const bottom = state.horiz[r+1][c];
+      const left = state.vert[r][c];
+      const right = state.vert[r][c+1];
+      const topEdge = top ? 1 : 0;
+      const bottomEdge = 1;
+      const leftEdge = left ? 1 : 0;
+      const rightEdge = right ? 1 : 0;
+      if(topEdge+bottomEdge+leftEdge+rightEdge === 4) cnt++;
+    }
+  } else {
+    const r = move.r, c = move.c;
+    if(c-1 >= 0){
+      const top = state.horiz[r][c-1];
+      const bottom = state.horiz[r+1][c-1];
+      const left = state.vert[r][c-1];
+      const right = state.vert[r][c];
+      const topEdge = top ? 1 : 0;
+      const bottomEdge = bottom ? 1 : 0;
+      const leftEdge = left ? 1 : 0;
+      const rightEdge = 1;
+      if(topEdge+bottomEdge+leftEdge+rightEdge === 4) cnt++;
+    }
+    if(c < state.cols-1){
+      const top = state.horiz[r][c];
+      const bottom = state.horiz[r+1][c];
+      const left = state.vert[r][c];
+      const right = state.vert[r][c+1];
+      const topEdge = top ? 1 : 0;
+      const bottomEdge = bottom ? 1 : 0;
+      const leftEdge = 1;
+      const rightEdge = right ? 1 : 0;
+      if(topEdge+bottomEdge+leftEdge+rightEdge === 4) cnt++;
+    }
+  }
+  return cnt;
+}
+
+/* Count how many boxes would be left with 3 sides (i.e., give opponent immediate capture) */
+function boxesWith3SidesAfter(move){
+  let count = 0;
+  // temporarily mark the move and check adjacent boxes' side counts
+  // simulate by checking side counts with the extra edge as 1
+  function sideCountBox(r,c,extra){
+    let sc=0;
+    if(state.horiz[r][c]) sc++;
+    if(state.horiz[r+1][c]) sc++;
+    if(state.vert[r][c]) sc++;
+    if(state.vert[r][c+1]) sc++;
+    return sc + (extra?1:0);
+  }
+  if(move.type === 'h'){
+    const r=move.r, c=move.c;
+    // top
+    if(r-1>=0){
+      let sc=0;
+      sc += state.horiz[r-1][c] ? 1 : 0;
+      sc += 1; // this move
+      sc += state.vert[r-1][c] ? 1 : 0;
+      sc += state.vert[r-1][c+1] ? 1 : 0;
+      if(sc===3) count++;
+    }
+    // bottom
+    if(r<state.rows-1){
+      let sc=0;
+      sc += state.horiz[r][c] ? 1 : 0;
+      sc += 1;
+      sc += state.vert[r][c] ? 1 : 0;
+      sc += state.vert[r][c+1] ? 1 : 0;
+      if(sc===3) count++;
+    }
+  } else {
+    const r=move.r, c=move.c;
+    // left
+    if(c-1>=0){
+      let sc=0;
+      sc += state.horiz[r][c-1] ? 1 : 0;
+      sc += state.horiz[r+1][c-1] ? 1 : 0;
+      sc += state.vert[r][c-1] ? 1 : 0;
+      sc += 1;
+      if(sc===3) count++;
+    }
+    // right
+    if(c<state.cols-1){
+      let sc=0;
+      sc += state.horiz[r][c] ? 1 : 0;
+      sc += state.horiz[r+1][c] ? 1 : 0;
+      sc += 1;
+      sc += state.vert[r][c+1] ? 1 : 0;
+      if(sc===3) count++;
+    }
+  }
+  return count;
+}
+
+/* CPU move logic based on difficulty */
+function cpuMove(){
+  if(!state || state.turn !== 'B') return;
+  const moves = availableMoves();
+  if(moves.length === 0) return;
+  const diff = state.aiDifficulty || aiDifficultySel.value || 'medium';
+  // 1) If any move completes box, take them (prioritize completing)
+  for(const m of moves){
+    if(countBoxesIf(m) > 0){
+      playEdge(m, 'B');
+      return;
+    }
+  }
+  if(diff === 'easy'){
+    // pick random
+    const m = moves[randInt(0, moves.length-1)];
+    playEdge(m, 'B');
+    return;
+  }
+  // medium: avoid giving boxes: prefer moves that produce zero boxes-with-3-sides
+  let safe = moves.filter(m => boxesWith3SidesAfter(m) === 0);
+  if(safe.length > 0){
+    // select random safe
+    const m = safe[randInt(0,safe.length-1)];
+    playEdge(m,'B'); return;
+  }
+  if(diff === 'medium'){
+    // no safe moves -> random
+    const m = moves[randInt(0, moves.length-1)];
+    playEdge(m,'B'); return;
+  }
+  // hard: prefer move that minimizes boxesWith3SidesAfter, and minimizes moves that give opponent many captures
+  let best = null; let bestScore = Infinity;
+  for(const m of moves){
+    const bad = boxesWith3SidesAfter(m);
+    const capturesIfOpponent = estimateOpponentCapturesAfter(m);
+    const score = bad*10 + capturesIfOpponent; // heuristic
+    if(score < bestScore){
+      bestScore = score; best = m;
+    }
+  }
+  if(best) playEdge(best,'B'); else {
+    playEdge(moves[randInt(0, moves.length-1)], 'B');
+  }
+}
+
+/* Rough estimate of how many boxes opponent could capture immediately after move */
+function estimateOpponentCapturesAfter(move){
+  // We'll simulate the move quickly by temporarily marking arrays and counting boxes with 3 sides after which opponent would complete.
+  const toUndo = [];
+  if(move.type==='h'){ state.horiz[move.r][move.c] = 'B'; toUndo.push(['h',move.r,move.c]); }
+  else { state.vert[move.r][move.c] = 'B'; toUndo.push(['v',move.r,move.c]); }
+  let count = 0;
+  // for each available move after this, count boxes that move would complete (i.e., look for boxes with 3 sides)
+  const moves = availableMoves();
+  for(const m of moves){
+    if(countBoxesIf(m) > 0) count++;
+  }
+  // undo
+  for(const u of toUndo){
+    if(u[0]==='h') state.horiz[u[1]][u[2]] = null;
+    else state.vert[u[1]][u[2]] = null;
+  }
+  return count;
+}
+
+/* ---------- Timer & Highscore ---------- */
+function startTimer(){
+  stopTimer();
+  timerInterval = setInterval(()=>{
+    elapsedSeconds++;
+    timerEl.textContent = fmtTime(elapsedSeconds);
+  },1000);
+}
+function stopTimer(){
+  if(timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+}
+
+/* When game ends */
+function endGame(){
+  stopTimer();
+  renderBoard();
+  updateUI();
+  // determine winner
+  const a = state.scores.A, b = state.scores.B;
+  let msg;
+  if(a > b) msg = `Player ${state.playerA} (A) wins!`;
+  else if(b > a) msg = `Player ${state.playerB} (B) wins!`;
+  else msg = `Draw!`;
+  alert(`${msg}\nTime: ${fmtTime(elapsedSeconds)}\nMoves: ${state.moveCount}`);
+  // save highscore if winner is human and faster
+  const winner = (a > b) ? 'A' : (b > a ? 'B' : null);
+  if(winner){
+    const winnerIsHuman = !(state.cpuIsB && winner === 'B' && state.mode === 'vsCPU');
+    if(winnerIsHuman){
+      const playerName = (winner==='A') ? state.playerA : state.playerB;
+      saveHighscore({mode: state.mode, level: state.level, player: playerName, time: elapsedSeconds, date: new Date().toISOString()});
+    }
+  }
+}
+
+/* ---------- Highscore storage ---------- */
+function loadHighscores(){
+  try{
+    const raw = localStorage.getItem(HS_KEY);
+    if(!raw) return [];
+    return JSON.parse(raw);
+  }catch(e){ return []; }
+}
+function saveHighscore(entry){
+  const arr = loadHighscores();
+  // We'll keep best times per (mode,level,player) but also keep a top list
+  arr.push(entry);
+  // sort by time ascending
+  arr.sort((a,b)=> a.time - b.time);
+  // keep top 30
+  const keep = arr.slice(0,30);
+  localStorage.setItem(HS_KEY, JSON.stringify(keep));
+  refreshHSUI();
+}
+function refreshHSUI(){
+  const arr = loadHighscores();
+  hsListEl.innerHTML = '';
+  if(arr.length === 0){ hsListEl.textContent = 'No highscores yet.'; return; }
+  for(const e of arr.slice(0,10)){
+    const div = document.createElement('div');
+    div.className = 'small';
+    div.style.padding='6px';
+    div.style.borderBottom = '1px dashed var(--line)';
+    div.innerHTML = `<strong>${e.player}</strong> • ${e.mode} • ${e.level} • ${fmtTime(e.time)} <span style="color:var(--muted);font-size:12px">(${new Date(e.date).toLocaleString()})</span>`;
+    hsListEl.appendChild(div);
+  }
+}
+
+/* ---------- Save / Load game ---------- */
+function saveGame(){
+  if(!state) return;
+  const payload = {
+    state,
+    elapsedSeconds,
+    savedAt: new Date().toISOString()
+  };
+  localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
+  alert('Game saved.');
+}
+function loadGame(){
+  const raw = localStorage.getItem(SAVE_KEY);
+  if(!raw){ alert('No saved game found.'); return; }
+  try{
+    const payload = JSON.parse(raw);
+    state = payload.state;
+    elapsedSeconds = payload.elapsedSeconds || 0;
+    timerEl.textContent = fmtTime(elapsedSeconds);
+    stopTimer();
+    if(state.started) startTimer();
+    pANameInput.value = state.playerA;
+    pBNameInput.value = state.playerB;
+    aiDifficultySel.value = state.aiDifficulty || 'medium';
+    modeSelect.value = state.mode;
+    levelSelect.value = state.level;
+    pBLabel.textContent = state.cpuIsB ? 'Computer' : 'Player B';
+    updateUI();
+    renderBoard();
+    alert('Game loaded.');
+  }catch(e){
+    console.error(e);
+    alert('Failed to load saved game.');
+  }
+}
+
+/* auto-save small snapshot (not user-facing) */
+function saveTempAuto(){
+  // optional; we won't flood localStorage. Save small snapshot of config
+  // Not used heavily.
+}
+
+/* ---------- UI updates ---------- */
+function updateUI(){
+  if(!state) return;
+  scoreAEl.textContent = state.scores.A;
+  scoreBEl.textContent = state.scores.B;
+  turnDisplay.textContent = state.turn === 'A' ? state.playerA : state.playerB;
+  moveCountEl.textContent = state.moveCount;
+  boxesLeftEl.textContent = state.boxesLeft;
+  pANameInput.value = state.playerA;
+  pBNameInput.value = state.playerB;
+  aiDifficultySel.value = state.aiDifficulty || 'medium';
+  pBLabel.textContent = state.cpuIsB ? 'Computer' : 'Player B';
+  // disable pBName if CPU
+  pBNameInput.disabled = state.cpuIsB;
+  // show/hide undo (not implemented)
+  refreshHSUI();
+}
+
+/* ---------- Event listeners ---------- */
+newBtn.addEventListener('click', ()=>{
+  state && stopTimer();
+  // update player names to current inputs
+  const pA = (pANameInput.value||'A').slice(0,2) || 'A';
+  const pB = (pBNameInput.value||'B').slice(0,2) || 'B';
+  pANameInput.value = pA; pBNameInput.value = pB;
+  newGame({mode: modeSelect.value, level: levelSelect.value});
+});
+
+saveBtn.addEventListener('click', ()=>{ if(!state) return alert('Start a game first'); saveGame(); });
+loadBtn.addEventListener('click', ()=>{ loadGame(); });
+resetStorageBtn.addEventListener('click', ()=>{
+  if(confirm('Reset all saved highscores and savegame?')){ localStorage.removeItem(HS_KEY); localStorage.removeItem(SAVE_KEY); refreshHSUI(); alert('Storage reset.'); }
+});
+aiDifficultySel.addEventListener('change', ()=>{
+  if(state){ state.aiDifficulty = aiDifficultySel.value; }
+});
+pANameInput.addEventListener('change', ()=>{ if(state) state.playerA = (pANameInput.value||'A').slice(0,2) || 'A'; updateUI(); });
+pBNameInput.addEventListener('change', ()=>{ if(state){ state.playerB = (pBNameInput.value||'B').slice(0,2) || 'B'; updateUI(); }});
+modeSelect.addEventListener('change', ()=>{
+  // update player B label
+  if(state){
+    state.mode = modeSelect.value;
+    state.cpuIsB = (state.mode === 'vsCPU');
+    pBLabel.textContent = state.cpuIsB ? 'Computer' : 'Player B';
+    pBNameInput.disabled = state.cpuIsB;
+  }
+});
+showStateBtn.addEventListener('click', ()=>{
+  if(!state) return alert(JSON.stringify(state,null,2));
+});
+
+/* ---------- Init ---------- */
+(function init(){
+  refreshHSUI();
+  // start default new game
+  newGame();
+})();
+</script>
+</body>
+</html>
