@@ -29,9 +29,9 @@ You can play instantly in your browser here:
 ## Screenshot
 Here’s a preview of the game board:
 
-![Games of Dots Screenshot1](https://emenes.github.io/img/1.png)
-![Games of Dots Screenshot2](https://emenes.github.io/img/2.png)
-![Games of Dots Screenshot3](https://emenes.github.io/img/3.png)
+[Games of Dots Screenshot1](https://emenes.github.io/img/1.png)
+[Games of Dots Screenshot2](https://emenes.github.io/img/2.png)
+[Games of Dots Screenshot3](https://emenes.github.io/img/3.png)
 
 ---
 
